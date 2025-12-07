@@ -1,0 +1,233 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+// 1. Variable Overrides
+$font-family-sans-serif: 'Inter', sans-serif;
+$primary: #4f46e5; // Indigo 600
+$secondary: #64748b; // Slate 500
+$success: #10b981; // Emerald 500
+$info: #0ea5e9; // Sky 500
+$warning: #f59e0b; // Amber 500
+$danger: #ef4444; // Red 500
+$light: #f8fafc; // Slate 50
+$dark: #0f172a; // Slate 900
+
+$body-bg: #f1f5f9; // Slate 100
+$body-color: #334155; // Slate 700
+
+$border-radius: 0.75rem;
+$border-radius-lg: 1rem;
+$border-radius-sm: 0.5rem;
+
+$box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$box-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+$input-btn-padding-y: 0.625rem;
+$input-btn-padding-x: 1.25rem;
+
+// Typography Standards
+$font-size-base: 0.875rem; // 14px - slightly smaller than default 16px
+$line-height-base: 1.6; // Improved readability
+$headings-font-weight: 600; // Slightly lighter headings for modern look
+$small-font-size: 0.875em;
+
+// 2. Import Bootstrap
+@import "bootstrap/scss/bootstrap";
+
+// 3. Custom Styles & Overrides
+
+body {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  min-height: 100vh;
+  letter-spacing: -0.01em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: $dark;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+// Navbar
+.navbar {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  box-shadow: $box-shadow-sm;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+
+  .navbar-brand {
+    color: $primary !important;
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -0.03em;
+  }
+
+  .nav-link {
+    color: $secondary !important;
+    font-weight: 500;
+    transition: color 0.2s;
+    
+    &:hover {
+      color: $primary !important;
+    }
+  }
+}
+
+// Cards
+.card {
+  border: none;
+  background: #ffffff;
+  box-shadow: $box-shadow;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $box-shadow-lg;
+  }
+
+  .card-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 1.5rem;
+    font-weight: 600;
+    
+    &.bg-primary, &.bg-info {
+      background: transparent !important;
+      color: $dark !important;
+      font-size: 1.25rem;
+      padding-bottom: 0.5rem;
+      border-bottom: none;
+    }
+  }
+
+  .card-body {
+    padding: 1.5rem;
+  }
+}
+
+// Buttons
+.btn {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  box-shadow: $box-shadow-sm;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: $box-shadow;
+  }
+
+  &.btn-primary {
+    background: linear-gradient(135deg, $primary 0%, darken($primary, 5%) 100%);
+    border: none;
+  }
+
+  &.btn-success {
+    background: linear-gradient(135deg, $success 0%, darken($success, 5%) 100%);
+    border: none;
+  }
+}
+
+// Forms
+.form-control {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: $dark;
+  font-weight: 500;
+  
+  &:focus {
+    background-color: #fff;
+    border-color: lighten($primary, 20%);
+    box-shadow: 0 0 0 4px rgba($primary, 0.1);
+  }
+
+  &:disabled, &[readonly] {
+    background-color: #f1f5f9;
+    opacity: 0.8;
+  }
+}
+
+.form-label {
+  font-weight: 600;
+  color: $secondary;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+// List Groups (Calendar)
+.list-group-item {
+  border: none;
+  margin-bottom: 0.5rem;
+  border-radius: $border-radius !important;
+  background: #fff;
+  box-shadow: $box-shadow-sm;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #f8fafc;
+    transform: translateX(4px);
+  }
+
+  &.active {
+    background: linear-gradient(135deg, $primary 0%, darken($primary, 5%) 100%);
+    border: none;
+    box-shadow: $box-shadow;
+    
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
+// Modals
+.modal-content {
+  border: none;
+  box-shadow: $box-shadow-lg;
+  border-radius: $border-radius-lg;
+}
+
+.modal-header {
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.modal-footer {
+  border-top: none;
+}
+
+// Utilities
+.text-muted {
+  color: #94a3b8 !important;
+}
+
+.spinner-lg {
+  width: 3rem;
+  height: 3rem;
+  border-width: 0.25em;
+}
+// Custom Scrollbar
+.custom-scrollbar {
+ &::-webkit-scrollbar {
+ width: 6px;
+ }
+ 
+ &::-webkit-scrollbar-track {
+ background: transparent; 
+ }
+ 
+ &::-webkit-scrollbar-thumb {
+ background-color: rgba($secondary, 0.3);
+ border-radius: 20px;
+ border: 2px solid transparent;
+ background-clip: content-box;
+ 
+ &:hover {
+ background-color: rgba($secondary, 0.5);
+ }
+ }
+}
+

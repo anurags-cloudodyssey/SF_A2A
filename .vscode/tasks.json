@@ -1,0 +1,17 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "append_scss",
+			"type": "shell",
+			"command": "Add-Content",
+			"args": [
+				"client/src/styles/main.scss",
+				"\n// Custom Scrollbar\n.custom-scrollbar {\n  &::-webkit-scrollbar {\n    width: 6px;\n  }\n  \n  &::-webkit-scrollbar-track {\n    background: transparent; \n  }\n  \n  &::-webkit-scrollbar-thumb {\n    background-color: rgba($secondary, 0.3);\n    border-radius: 20px;\n    border: 2px solid transparent;\n    background-clip: content-box;\n    \n    &:hover {\n      background-color: rgba($secondary, 0.5);\n    }\n  }\n}\n"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "edit"
+		}
+	]
+}

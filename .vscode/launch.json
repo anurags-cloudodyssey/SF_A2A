@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug Server",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/server/server.js",
+            "cwd": "${workspaceFolder}/server",
+            "envFile": "${workspaceFolder}/server/.env",
+            "console": "integratedTerminal"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Debug Client",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/client/src",
+            "preLaunchTask": "Run Client"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Full Stack",
+            "configurations": ["Debug Server", "Debug Client"]
+        }
+    ]
+}
