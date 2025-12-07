@@ -75,7 +75,7 @@ exports.queryPreferences = async (data) => {
   const location = eventLocation || "Hyderabad"; 
   const summary = eventSummary || "celebration";
 
-  const prompt = `For the user with phone number ${phone}, I am planning a ${summary} celebration in a specific region of ${location}; provide detailed region-specific recommendations including the best hotels (with price range, capacity, ambience, suitability), top dining options (cuisine, cost for two, ambience, celebration features), nearby shopping options (malls, markets, boutiques), suitable celebration themes/venue types, suggestions across premium/mid-range/affordable budgets, and details on travel convenience, nearest metro, parking, and safety.`;
+  const prompt = `For the user with phone number ${phone}, I am planning a ${summary} celebration in a specific region of ${location}; fetch recommendations based on the user's account balance. Restrict the output to the top two suggestions for each category. Provide detailed region-specific recommendations including the best hotels (with price range, capacity, ambience, suitability), top dining options (cuisine, cost for two, ambience, celebration features), nearby shopping options (malls, markets, boutiques), suitable celebration themes/venue types, and details on travel convenience, nearest metro, parking, and safety.`;
 
   const rpcBody = {
     "jsonrpc": "2.0",
@@ -115,8 +115,6 @@ exports.getGiftRecommendations = async (data) => {
 
   const prompt = `Based on the following details, suggest personalized gift ideas: Events: ${JSON.stringify(events)} User Profile: ${JSON.stringify(userProfile)} Family Members: ${JSON.stringify(familyMembers)} Provide a list of thoughtful and unique gift ideas that align with the user's interests and the nature of the events. Include brief descriptions and reasons why each gift would be suitable.`;
   const rpcBody = createRpcBody(prompt);
-  
-  console.log('Gift Recommendation Prompt:', prompt);
 
   const rawResponse = await handleRequest(axios.post(GIFT_RECOMMEND_AGENT_URL, rpcBody));
 

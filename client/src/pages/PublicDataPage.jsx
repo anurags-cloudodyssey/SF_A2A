@@ -127,6 +127,9 @@ const PublicDataPage = () => {
     return Object.keys(data).map(key => {
       // Skip complex objects/arrays if any (though prompt implies flat structure inside)
       if (typeof data[key] === 'object' && data[key] !== null) return null;
+      
+      // Skip user_id field
+      if (key === 'user_id') return null;
 
       const isReadOnly = ['full_name', 'email', 'phone'].includes(key);
       
@@ -151,82 +154,94 @@ const PublicDataPage = () => {
 
   return (
     <div className="container">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h2 className="fw-bold text-dark mb-1">Review Public Data</h2>
-          <p className="text-muted">Verify and update your profile information</p>
-        </div>
-      </div>
-      
-      {error && <div className="alert alert-danger rounded-3 shadow-sm border-0">{error}</div>}
+      {error && <div className="alert alert-danger rounded-3 shadow-sm border-0 mb-4">{error}</div>}
 
       {publicData && (
-        <form>
-          <div className="row g-4">
-            {/* User Profiles Section */}
-            {publicData.user_profiles && (
-              <div className="col-lg-6">
-                <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '16px', overflow: 'hidden' }}>
-                  <div className="card-header bg-white border-bottom py-3 px-4">
-                    <div className="d-flex align-items-center">
-                      <div className="bg-primary-subtle text-primary rounded-circle p-2 me-3">
-                        <i className="bi bi-person-fill fs-5"></i>
-                      </div>
-                      <h5 className="mb-0 text-dark fw-bold">User Profile</h5>
-                    </div>
-                  </div>
-                  <div className="card-body p-4 custom-scrollbar" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                    <div className="row g-3">
-                      {renderFormFields(publicData.user_profiles, 'user_profiles')}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Family Members Section */}
-            {publicData.family_members && Array.isArray(publicData.family_members) && (
-              <div className="col-lg-6">
-                <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '16px', overflow: 'hidden' }}>
-                  <div className="card-header bg-white border-bottom py-3 px-4">
-                    <div className="d-flex align-items-center">
-                      <div className="bg-info-subtle text-info rounded-circle p-2 me-3">
-                        <i className="bi bi-people-fill fs-5"></i>
-                      </div>
-                      <h5 className="mb-0 text-dark fw-bold">Family Members</h5>
-                    </div>
-                  </div>
-                  <div className="card-body p-4 custom-scrollbar" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                    {publicData.family_members.map((member, idx) => (
-                      <div key={idx} className="mb-4 border-bottom pb-4 last-child-no-border">
-                        <div className="d-flex align-items-center mb-3">
-                          <span className="badge bg-light text-dark border me-2">#{idx + 1}</span>
-                          <h6 className="text-uppercase text-muted fw-bold small mb-0">Member Details</h6>
-                        </div>
-                        <div className="row g-3">
-                          {renderFormFields(member, 'family_members', idx)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+        <div className="p-4 p-md-5 bg-white border-0 shadow rounded-4 mb-5 position-relative overflow-hidden">
+          <div className="text-center mb-4">
+            <div className="mb-3">
+              <span className="badge bg-primary-subtle text-primary rounded-pill px-3 py-2">Step 1</span>
+            </div>
+            <h3 className="fw-bold mb-3">Review Public Data</h3>
+            <p className="text-muted mb-4" style={{maxWidth: '500px', margin: '0 auto'}}>
+              Verify and update your profile information
+            </p>
           </div>
-        </form>
+          
+          <form>
+            <div className="row g-4">
+              {/* User Profiles Section */}
+              {publicData.user_profiles && (
+                <div className="col-lg-6">
+                  <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+                    <div className="card-header bg-white border-bottom py-3 px-4">
+                      <div className="d-flex align-items-center">
+                        <div className="bg-primary-subtle text-primary rounded-circle p-2 me-3">
+                          <i className="bi bi-person-fill fs-5"></i>
+                        </div>
+                        <h5 className="mb-0 text-dark fw-bold">User Profile</h5>
+                      </div>
+                    </div>
+                    <div className="card-body p-4 custom-scrollbar" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                      <div className="row g-3">
+                        {renderFormFields(publicData.user_profiles, 'user_profiles')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Family Members Section */}
+              {publicData.family_members && Array.isArray(publicData.family_members) && (
+                <div className="col-lg-6">
+                  <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+                    <div className="card-header bg-white border-bottom py-3 px-4">
+                      <div className="d-flex align-items-center">
+                        <div className="bg-info-subtle text-info rounded-circle p-2 me-3">
+                          <i className="bi bi-people-fill fs-5"></i>
+                        </div>
+                        <h5 className="mb-0 text-dark fw-bold">Family Members</h5>
+                      </div>
+                    </div>
+                    <div className="card-body p-4 custom-scrollbar" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                      {publicData.family_members.map((member, idx) => (
+                        <div key={idx} className="mb-4 border-bottom pb-4 last-child-no-border">
+                          <div className="d-flex align-items-center mb-3">
+                            <span className="badge bg-light text-dark border me-2">#{idx + 1}</span>
+                            <h6 className="text-uppercase text-muted fw-bold small mb-0">Member Details</h6>
+                          </div>
+                          <div className="row g-3">
+                            {renderFormFields(member, 'family_members', idx)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </form>
+        </div>
       )}
 
       {!showConnectButton && (
-        <div className="d-flex justify-content-end mt-4 mb-5">
-          <button className="btn btn-success btn-lg px-5 rounded-pill shadow hover-scale transition-all" onClick={handleSave} disabled={loading}>
-            {loading ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                Saving...
-              </>
-            ) : 'Save & Continue'}
-          </button>
-        </div>
+        <>
+          <div style={{ height: '100px' }}></div>
+          <div className="position-fixed bottom-0 start-0 end-0 bg-white border-top py-3 shadow-lg" style={{ zIndex: 1030 }}>
+            <div className="container">
+              <div className="d-grid d-md-flex justify-content-md-end">
+                <button className="btn btn-success btn-lg px-5 rounded-pill shadow hover-scale transition-all" onClick={handleSave} disabled={loading}>
+                  {loading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Saving...
+                    </>
+                  ) : 'Save & Continue'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {showConnectButton && (

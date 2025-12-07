@@ -37,7 +37,16 @@ const AuthPage = () => {
         }
       } catch (error) {
         console.error('Signup failed:', error);
-        toast.error('Signup failed. Please check your details and try again.');
+        
+        // Handle duplicate user error (409 Conflict)
+        if (error.response && error.response.status === 409) {
+          toast.info('Account already exists. Logging you in...');
+          // Automatically login and proceed
+          login({ name: formData.name, email: formData.email, phone: formData.phone });
+          navigate('/public-data');
+        } else {
+          toast.error('Signup failed. Please check your details and try again.');
+        }
       }
     } else {
       // In a real app, we would call a backend auth endpoint here.

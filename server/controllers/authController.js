@@ -31,7 +31,14 @@ exports.signupUser = async (req, res) => {
       res.status(response.status).json({ message: 'Failed to create user', details: response.data });
     }
   } catch (error) {
-    console.error('Signup Error:', error.response ? error.response.data : error.message);
-    res.status(500).json({ error: 'Signup failed', details: error.response ? error.response.data : error.message });
+    const errorData = error.response ? error.response.data : error.message;
+    console.error('Signup Error:', errorData);
+
+    // Handle duplicate email error (Supabase/Postgres unique constraint violation)
+    if (errorData && (errorData.code === '23505' || (errorData.message && errorData.message.includes('duplicate key')))) {
+      return res.status(409).json({ message: 'User already exists', details: errorData });
+    }
+
+    res.status(500).json({ error: 'Signup failed', details: errorData });
   }
 };

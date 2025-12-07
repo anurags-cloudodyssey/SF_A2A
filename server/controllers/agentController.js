@@ -20,8 +20,6 @@ exports.getPublicData = async (req, res) => {
 exports.savePreferences = async (req, res) => {
   try {
     const preferenceData = req.body;
-    console.log('Saving preferences:', JSON.stringify(preferenceData, null, 2));
-
     const result = await agentService.savePreferences(preferenceData);
     res.json(result);
   } catch (error) {

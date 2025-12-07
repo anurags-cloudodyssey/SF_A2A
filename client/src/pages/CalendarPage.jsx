@@ -72,7 +72,7 @@ const MarkdownCardRenderer = ({ text }) => {
                   const detailLines = details.split('\n').map(l => l.trim()).filter(l => l);
 
                   return (
-                    <div key={i} className="col-12 col-md-6">
+                    <div key={i} className="col-12">
                       <div className="card h-100 border-0 shadow-sm hover-shadow transition-all" style={{ borderRadius: '12px', backgroundColor: '#ffffff' }}>
                         <div className="card-body p-4">
                           <div className="d-flex align-items-start mb-3">
@@ -311,102 +311,133 @@ const CalendarPage = () => {
 
   return (
     <div className="container">
-      <div className="mb-4">
-        <h2 className="fw-bold text-dark mb-1">Your Calendar</h2>
-        <p className="text-muted">Select an event to get AI-powered recommendations</p>
-      </div>
-      
-      {loadingEvents ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary mb-3" style={{width: '3rem', height: '3rem'}}></div>
-          <p className="text-muted">Syncing your calendar...</p>
+      <div className="p-4 p-md-5 bg-white border-0 shadow rounded-4 mb-5 position-relative overflow-hidden">
+        <div className="text-center mb-4">
+          <h3 className="fw-bold mb-3">Your Calendar Insights</h3>
+          <p className="text-muted mb-4" style={{maxWidth: '600px', margin: '0 auto'}}>
+            Select an event to get AI-powered recommendations tailored to your preferences.
+          </p>
         </div>
-      ) : (
-        <div className="row g-4">
-          <div className="col-md-4">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-header bg-white border-bottom py-3">
-                <h6 className="mb-0 fw-bold text-uppercase text-muted small">Upcoming Events</h6>
-              </div>
-              <div className="list-group list-group-flush p-2">
-                {events.map(evt => (
-                  <button 
-                    key={evt.id} 
-                    className={`list-group-item list-group-item-action rounded mb-2 border-0 p-3 ${selectedEvent?.id === evt.id ? 'active shadow' : ''}`}
-                    onClick={() => handleEventClick(evt)}
-                  >
-                    <div className="d-flex w-100 justify-content-between align-items-center mb-1">
-                      <h6 className={`mb-0 fw-bold ${selectedEvent?.id === evt.id ? 'text-white' : 'text-dark'}`}>{evt.summary || 'No Title'}</h6>
+      
+        {loadingEvents ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-primary mb-3" style={{width: '3rem', height: '3rem'}}></div>
+            <p className="text-muted">Syncing your calendar...</p>
+          </div>
+        ) : (
+          <div className="row g-4">
+            {/* Left Column: Events List */}
+            <div className="col-lg-4">
+              <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+                <div className="card-header bg-white border-bottom py-3 px-4">
+                  <div className="d-flex align-items-center">
+                    <div className="bg-primary-subtle text-primary rounded-circle p-2 me-3">
+                      <i className="bi bi-calendar-event-fill fs-5"></i>
                     </div>
-                    <small className={selectedEvent?.id === evt.id ? 'text-white-50' : 'text-muted'}>
-                      <i className="bi bi-calendar-event me-2"></i>
-                      {evt.start?.dateTime ? new Date(evt.start.dateTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : evt.start?.date}
-                    </small>
-                  </button>
-                ))}
-                {events.length === 0 && <div className="p-3 text-center text-muted">No events found.</div>}
+                    <h5 className="mb-0 text-dark fw-bold">Upcoming Events</h5>
+                  </div>
+                </div>
+                <div className="card-body p-2 custom-scrollbar" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                  <div className="list-group list-group-flush">
+                    {events.map(evt => (
+                      <button 
+                        key={evt.id} 
+                        className={`list-group-item list-group-item-action rounded mb-2 border-0 p-3 transition-all ${selectedEvent?.id === evt.id ? 'shadow-sm bg-primary-subtle text-primary' : 'hover-bg-light'}`}
+                        onClick={() => handleEventClick(evt)}
+                        style={{ borderRadius: '12px' }}
+                      >
+                        <div className="d-flex w-100 justify-content-between align-items-center mb-1">
+                          <h6 className={`mb-0 fw-bold ${selectedEvent?.id === evt.id ? 'text-primary' : 'text-dark'}`}>{evt.summary || 'No Title'}</h6>
+                        </div>
+                        <small className={selectedEvent?.id === evt.id ? 'text-primary' : 'text-muted'}>
+                          <i className="bi bi-clock me-2"></i>
+                          {evt.start?.dateTime ? new Date(evt.start.dateTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : evt.start?.date}
+                        </small>
+                      </button>
+                    ))}
+                    {events.length === 0 && <div className="p-4 text-center text-muted">No events found.</div>}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="col-md-8">
-            {selectedEvent ? (
-              <div className="card border-0 shadow h-100">
-                <div className="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0 fw-bold text-primary">
-                    AI Insights
-                  </h5>
-                  <span className="badge bg-light text-dark border">{selectedEvent.summary}</span>
-                </div>
-                <div className="card-body p-4">
-                  {loadingRecs ? (
-                    <div className="text-center py-5">
-                      <div className="spinner-border text-primary mb-3"></div>
-                      <p className="text-muted">Analyzing event context & preferences...</p>
+            {/* Right Column: AI Insights */}
+            <div className="col-lg-8">
+              <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+                <div className="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                  <div className="d-flex align-items-center">
+                    <div className="bg-info-subtle text-info rounded-circle p-2 me-3">
+                      <i className="bi bi-stars fs-5"></i>
                     </div>
-                  ) : (
-                    <div className="fade-in">
-                      {/* Display Recommendations from Step 3c */}
-                      {recommendations && (
-                        <div className="mb-4">
-                          <h6 className="fw-bold text-uppercase text-muted small mb-3">Strategic Suggestions</h6>
-                          <div className="p-2">
-                            <MarkdownCardRenderer text={recommendations.result?.status?.message?.parts?.[0]?.text || recommendations.result?.artifacts?.[0]?.parts?.[0]?.text} />
-                          </div>
+                    <h5 className="mb-0 text-dark fw-bold">AI Insights</h5>
+                  </div>
+                  {selectedEvent && <span className="badge bg-light text-dark border px-3 py-2 rounded-pill">{selectedEvent.summary}</span>}
+                </div>
+                
+                <div className="card-body p-4 custom-scrollbar" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                  {selectedEvent ? (
+                    <>
+                      {loadingRecs ? (
+                        <div className="text-center py-5">
+                          <div className="spinner-border text-primary mb-3"></div>
+                          <p className="text-muted">Analyzing event context & preferences...</p>
                         </div>
-                      )}
+                      ) : (
+                        <div className="fade-in">
+                          {/* Display Recommendations from Step 3c */}
+                          {recommendations && (
+                            <div className="mb-5">
+                              <div className="d-flex align-items-center mb-4">
+                                <span className="badge bg-primary-subtle text-primary me-2">STRATEGY</span>
+                                <h6 className="fw-bold text-uppercase text-muted small mb-0">Strategic Suggestions</h6>
+                              </div>
+                              <div className="p-1">
+                                <MarkdownCardRenderer text={recommendations.result?.status?.message?.parts?.[0]?.text || recommendations.result?.artifacts?.[0]?.parts?.[0]?.text} />
+                              </div>
+                            </div>
+                          )}
 
-                      {/* Display Gift Ideas from Step 4 */}
-                      {giftIdeas && (
-                        <div>
-                          <h6 className="fw-bold text-uppercase text-success small mb-3">Gift Ideas & Actions</h6>
-                          <div className="p-2">
-                             <MarkdownCardRenderer text={giftIdeas.result?.status?.message?.parts?.[0]?.text || giftIdeas.result?.artifacts?.[0]?.parts?.[0]?.text} />
-                          </div>
+                          {/* Display Gift Ideas from Step 4 */}
+                          {giftIdeas && (
+                            <div className="mb-3">
+                              <div className="d-flex align-items-center mb-4">
+                                <span className="badge bg-success-subtle text-success me-2">GIFTS</span>
+                                <h6 className="fw-bold text-uppercase text-muted small mb-0">Gift Ideas & Actions</h6>
+                              </div>
+                              <div className="p-1">
+                                 <MarkdownCardRenderer text={giftIdeas.result?.status?.message?.parts?.[0]?.text || giftIdeas.result?.artifacts?.[0]?.parts?.[0]?.text} />
+                              </div>
+                            </div>
+                          )}
+                          
+                          {!recommendations && !giftIdeas && (
+                            <div className="text-center py-5 text-muted">
+                              <i className="bi bi-exclamation-circle display-4 mb-3 d-block text-secondary opacity-25"></i>
+                              <p>No recommendations available for this event.</p>
+                            </div>
+                          )}
                         </div>
                       )}
-                      
-                      {!recommendations && !giftIdeas && (
-                        <div className="text-center py-5 text-muted">
-                          <p>No recommendations available for this event.</p>
+                    </>
+                  ) : (
+                    <div className="h-100 d-flex align-items-center justify-content-center text-center p-5">
+                      <div>
+                        <div className="mb-4 text-primary opacity-25">
+                          <i className="bi bi-calendar-check display-1"></i>
                         </div>
-                      )}
+                        <h5 className="fw-bold text-dark mb-2">Select an Event</h5>
+                        <p className="text-muted small" style={{maxWidth: '300px', margin: '0 auto'}}>
+                          Choose an event from the list on the left to generate personalized AI insights and recommendations.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
-            ) : (
-              <div className="card border-0 shadow-sm h-100 d-flex align-items-center justify-content-center bg-light">
-                <div className="text-center p-5">
-                  <div className="mb-3 text-muted" style={{ fontSize: '3rem' }}>👈</div>
-                  <h5 className="fw-bold text-muted">Select an event</h5>
-                  <p className="text-muted small">Choose an event from the list to generate AI insights.</p>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
