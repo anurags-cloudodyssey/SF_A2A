@@ -15,8 +15,8 @@ const Header = () => {
     <nav className="navbar navbar-expand-lg navbar-light fixed-top">
       <div className="container">
         <Link className="navbar-brand d-flex align-items-center gap-2" to="/">
-          <span className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px', fontSize: '18px'}}>AI</span>
-          <span>SF A2A MVP</span>
+          <span className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px', fontSize: '18px'}}>CO</span>
+          <span>ODYSSEY ONE</span>
         </Link>
         <div className="collapse navbar-collapse justify-content-end">
           {user && (
