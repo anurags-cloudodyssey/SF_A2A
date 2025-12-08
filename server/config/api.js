@@ -6,4 +6,5 @@ module.exports = {
   CALENDAR_AGENT_URL: process.env.CALENDAR_AGENT_URL || 'https://calendar-agent-app-bt5gn1.7y6hwo.usa-e2.cloudhub.io/calendar-agent',
   PREFERENCE_QUERY_AGENT_URL: process.env.PREFERENCE_QUERY_AGENT_URL || 'https://preference-agent-app-bt5gn1.7y6hwo.usa-e2.cloudhub.io/preference-agent',
   GIFT_RECOMMEND_AGENT_URL: process.env.GIFT_RECOMMEND_AGENT_URL || 'https://open-ai-agent-app-bt5gn1.7y6hwo.usa-e2.cloudhub.io/public-data-agent',
+  LOGIN_API_URL: process.env.LOGIN_API_URL || 'https://demojam-login-management-api-bt5gn1.7y6hwo.usa-e2.cloudhub.io/check/login',
 };

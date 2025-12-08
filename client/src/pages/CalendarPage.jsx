@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 
 const MarkdownCardRenderer = ({ text }) => {
@@ -19,7 +20,6 @@ const MarkdownCardRenderer = ({ text }) => {
         if (!content) return null;
 
         // Check for numbered list items (e.g., "1. **Name**")
-        // Improved regex to handle various numbered formats and spacing
         const numberedSplitRegex = /(?=\n\d+[\.\)]\s)/g;
         let listItems = content.split(numberedSplitRegex).map(s => s.trim()).filter(s => s);
         let isNumbered = listItems.some(item => /^\d+[\.\)]\s/.test(item));
@@ -45,8 +45,6 @@ const MarkdownCardRenderer = ({ text }) => {
                   let badgeContent = null;
 
                   if (isNumbered) {
-                      // Check if this specific chunk is a list item
-                      // Regex matches "1. Title" or "1) Title"
                       const itemMatch = item.match(/^(\d+)[\.\)]\s+(.*)/s);
                       if (!itemMatch) {
                         return <div key={i} className="col-12 text-muted mb-2">{item}</div>;
@@ -57,18 +55,15 @@ const MarkdownCardRenderer = ({ text }) => {
                       title = titleMatch ? titleMatch[1] : `Item ${itemMatch[1]}`;
                       details = titleMatch ? rawContent.replace(/^\*\*.*?\*\*/, '').trim() : rawContent;
                   } else {
-                      // Bullet item: - **Title** ...
                       const titleMatch = item.match(/^-\s*\*\*(.*?)\*\*/);
                       if (!titleMatch) {
                           return <div key={i} className="col-12 text-muted mb-2">{item}</div>;
                       }
                       title = titleMatch[1];
-                      // Use a checkmark or dot for bullets
                       badgeContent = <i className="bi bi-check2"></i>;
                       details = item.replace(/^-\s*\*\*.*?\*\*/, '').trim();
                   }
 
-                  // Parse details (bullet points)
                   const detailLines = details.split('\n').map(l => l.trim()).filter(l => l);
 
                   return (
@@ -85,7 +80,6 @@ const MarkdownCardRenderer = ({ text }) => {
                           </div>
                           <div className="ps-1">
                             {detailLines.map((line, lIdx) => {
-                              // Check for Key-Value pairs: - **Key:** Value
                               const kvMatch = line.match(/^-\s*\*\*(.*?):\*\*\s*(.*)/);
                               if (kvMatch) {
                                 return (
@@ -95,7 +89,6 @@ const MarkdownCardRenderer = ({ text }) => {
                                   </div>
                                 );
                               }
-                              // Regular bullet
                               return (
                                 <div key={lIdx} className="d-flex align-items-start mb-2 small text-muted">
                                   <span className="me-2 text-primary">•</span>
@@ -114,7 +107,6 @@ const MarkdownCardRenderer = ({ text }) => {
           );
         }
 
-        // Regular text block
         return (
           <div key={idx} className="bg-light p-3 rounded-3">
             {header && <h6 className="fw-bold text-dark mb-2">{header}</h6>}
@@ -126,9 +118,131 @@ const MarkdownCardRenderer = ({ text }) => {
   );
 };
 
+const parseEventsFromResponse = (rawData) => {
+  if (!rawData) return [];
+  
+  let textContent = '';
+  if (rawData.result?.status?.message?.parts?.[0]?.text) {
+    textContent = rawData.result.status.message.parts[0].text;
+  } else if (rawData.result?.artifacts?.[0]?.parts?.[0]?.text) {
+    textContent = rawData.result.artifacts[0].parts[0].text;
+  } else if (typeof rawData === 'string') {
+      textContent = rawData;
+  }
+
+  if (textContent) {
+    const extractedEvents = [];
+    const lines = textContent.split('\n');
+    let currentEvent = null;
+
+    lines.forEach(line => {
+      line = line.trim();
+      
+      // Match numbered items: "1. Title" or "1. **Title**" or "1. **Event:** Title"
+      const newItemMatch = line.match(/^\d+\.\s*(.*)/);
+      // Match bullet point event title: "- **Event Title:** Title" or "- **Event:** Title"
+      const bulletTitleMatch = line.match(/^-\s*\*\*(?:Event Title|Event):\*\*\s*(.*)/i);
+      
+      if (newItemMatch || bulletTitleMatch) {
+        if (currentEvent) extractedEvents.push(currentEvent);
+        
+        let rawTitle = newItemMatch ? newItemMatch[1] : bulletTitleMatch[1];
+        // Clean up title
+        rawTitle = rawTitle.replace(/\*\*/g, ''); // Remove bold markers
+        rawTitle = rawTitle.replace(/^Event:\s*/i, ''); // Remove "Event:" prefix
+        rawTitle = rawTitle.replace(/^Title:\s*/i, ''); // Remove "Title:" prefix
+        
+        currentEvent = { 
+          id: 'evt-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+          summary: rawTitle.trim(),
+          start: {},
+          end: {},
+          description: '',
+          location: '',
+          status: '',
+          htmlLink: ''
+        };
+        return;
+      }
+
+      if (!currentEvent) return;
+
+      // Parse details like "- **Date:** 2025-12-10"
+      const dateMatch = line.match(/-\s*\*\*?(Date|Time|Location|Start Date|End Date|Status|Link to Event|Event Link):?\*\*?\s*(.*)/i);
+      if (dateMatch) {
+          const key = dateMatch[1].toLowerCase().replace(/\s/g, '');
+          const value = dateMatch[2].trim();
+          
+          if (key === 'date' || key === 'startdate') {
+              currentEvent.start.date = value;
+              const parsedDate = new Date(value);
+              if (!isNaN(parsedDate.getTime())) {
+                  currentEvent.start.dateTime = parsedDate.toISOString();
+              }
+          } else if (key === 'enddate') {
+              currentEvent.end.date = value;
+              const parsedDate = new Date(value);
+              if (!isNaN(parsedDate.getTime())) {
+                  currentEvent.end.dateTime = parsedDate.toISOString();
+              }
+          } else if (key === 'time') {
+              currentEvent.description += `Time: ${value}\n`;
+              if (currentEvent.start.date) {
+                  const combined = new Date(`${currentEvent.start.date} ${value}`);
+                  if (!isNaN(combined.getTime())) {
+                      currentEvent.start.dateTime = combined.toISOString();
+                  }
+              }
+          } else if (key === 'location') {
+              currentEvent.location = value;
+              currentEvent.description += `Location: ${value}\n`;
+          } else if (key === 'status') {
+              currentEvent.status = value;
+          } else if (key === 'linktoevent' || key === 'eventlink') {
+              const linkUrlMatch = value.match(/\[.*?\]\((.*?)\)/);
+              if (linkUrlMatch) {
+                  currentEvent.htmlLink = linkUrlMatch[1];
+              } else {
+                  currentEvent.htmlLink = value;
+              }
+          }
+      }
+      
+      const linkMatch = line.match(/\[View Event\]\((.*?)\)/);
+      if (linkMatch && !currentEvent.htmlLink) {
+        currentEvent.htmlLink = linkMatch[1];
+      }
+    });
+    
+    if (currentEvent) extractedEvents.push(currentEvent);
+    
+    if (extractedEvents.length > 0) {
+        return extractedEvents;
+    }
+    
+    // Attempt to find a JSON array of objects (e.g. [{ ... }]) to avoid matching Markdown links like [View Event]
+    const jsonMatch = textContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    if (jsonMatch) {
+        try {
+            return JSON.parse(jsonMatch[0]);
+        } catch (e) {
+            // Silent fail or debug log if needed, but don't warn for non-JSON content
+        }
+    }
+  }
+
+  if (Array.isArray(rawData)) {
+    return rawData;
+  } else if (rawData.items && Array.isArray(rawData.items)) {
+    return rawData.items;
+  }
+
+  return [];
+};
+
 const CalendarPage = () => {
+  const { user, preferences } = useAuth();
   const location = useLocation();
-  const preferences = location.state?.preferences || {};
   
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
@@ -140,135 +254,49 @@ const CalendarPage = () => {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      // 1. Check if events were passed via navigation state (from PublicDataPage)
-      if (location.state?.events) {
-        try {
-          const rawData = location.state.events;
-          console.log('Processing passed events:', rawData);
-          
-          let parsedEvents = [];
-          
-          // Handle JSON-RPC structure from CloudHub Agent
-          if (rawData.result?.status?.message?.parts?.[0]?.text) {
-            const textContent = rawData.result.status.message.parts[0].text;
-            console.log('Parsing agent text response:', textContent);
-            
-            // Custom Markdown Parser for Calendar Events
-            const extractedEvents = [];
-            const lines = textContent.split('\n');
-            let currentEvent = null;
-
-            lines.forEach(line => {
-              line = line.trim();
-              
-              // Match event title: "1. **Birthday**" or "1. **Title**"
-              // Regex looks for: Number + dot + spaces + bold markers + content + bold markers
-              const titleMatch = line.match(/^\d+\.\s*\*\*(.*?)\*\*/);
-              
-              if (titleMatch) {
-                // Push previous event if exists
-                if (currentEvent) extractedEvents.push(currentEvent);
-                
-                // Start new event
-                currentEvent = { 
-                  id: 'evt-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
-                  summary: titleMatch[1],
-                  start: {},
-                  description: ''
-                };
-                return;
-              }
-
-              if (!currentEvent) return;
-
-              // Match Date: "- **Date:** December 8, 2025"
-              const dateMatch = line.match(/-\s*\*\*Date:\*\*\s*(.*)/);
-              if (dateMatch) {
-                const dateStr = dateMatch[1].trim();
-                currentEvent.start.date = dateStr;
-                
-                // Try to parse to ISO for better formatting if possible
-                const parsedDate = new Date(dateStr);
-                if (!isNaN(parsedDate.getTime())) {
-                    currentEvent.start.dateTime = parsedDate.toISOString();
-                }
-              }
-
-              // Match Time: "- **Time:** 9:00 AM - 10:00 AM"
-              const timeMatch = line.match(/-\s*\*\*Time:\*\*\s*(.*)/);
-              if (timeMatch) {
-                 currentEvent.description += `Time: ${timeMatch[1]}\n`;
-              }
-
-              // Match Location: "- **Location:** ..."
-              const locMatch = line.match(/-\s*\*\*Location:\*\*\s*(.*)/);
-              if (locMatch) {
-                currentEvent.location = locMatch[1].trim();
-                currentEvent.description += `Location: ${locMatch[1].trim()}\n`;
-              }
-              
-              // Match Link: "- [View Event](...)"
-              const linkMatch = line.match(/\[View Event\]\((.*?)\)/);
-              if (linkMatch) {
-                currentEvent.htmlLink = linkMatch[1];
-              }
-            });
-            
-            // Push the last event
-            if (currentEvent) extractedEvents.push(currentEvent);
-            
-            if (extractedEvents.length > 0) {
-                parsedEvents = extractedEvents;
-            } else {
-                // Fallback: Try to find JSON array if Markdown parsing failed
-                const jsonMatch = textContent.match(/\[[\s\S]*\]/);
-                if (jsonMatch) {
-                    try {
-                        parsedEvents = JSON.parse(jsonMatch[0]);
-                    } catch (e) {
-                        console.warn('Failed to parse JSON fallback', e);
-                    }
-                }
-            }
-          } 
-          // Handle direct array or Google Calendar API format
-          else if (Array.isArray(rawData)) {
-            parsedEvents = rawData;
-          } else if (rawData.items) {
-            parsedEvents = rawData.items;
-          }
-
-          if (parsedEvents.length > 0) {
-            setEvents(parsedEvents);
-            setLoadingEvents(false);
-            return;
-          }
-        } catch (err) {
-          console.error('Error parsing passed events:', err);
-        }
-      }
-
-      // 2. Fallback: Fetch from backend if no state passed or parsing failed
+      if (!user?.email) return;
+      
+      setLoadingEvents(true);
       try {
-        const response = await api.post('/calendar/events');
-        // Assuming response.data is an array of events or has an 'items' key
-        const eventList = Array.isArray(response.data) ? response.data : (response.data.items || []);
-        setEvents(eventList);
+        const rpcBody = {
+          "jsonrpc": "2.0",
+          "id": "task124",
+          "method": "tasks/send",
+          "params": {
+            "message": {
+              "role": "user",
+              "parts": [
+                {
+                  "type": "text",
+                  "text": `get all my calendar events ${user.email}?`
+                }
+              ]
+            }
+          }
+        };
+        const response = await api.post('/calendar/events', rpcBody);
+        console.log('API Response for events:', response.data);
+        const parsedEvents = parseEventsFromResponse(response.data);
+        
+        if (parsedEvents.length > 0) {
+          setEvents(parsedEvents);
+        } else {
+          // If no events found, set empty array instead of static data
+          // This prevents "flickering" to static data when user actually has 0 events
+          setEvents([]); 
+        }
       } catch (error) {
         console.error('Failed to fetch events', error);
-        toast.error('Failed to sync calendar. Showing offline/demo data.');
-        // Fallback mock data if API fails (for MVP demo purposes if API is unreachable)
-        setEvents([
-          { id: '1', summary: 'Daughter\'s Birthday', start: { dateTime: '2025-12-10T10:00:00' } },
-          { id: '2', summary: 'Team Lunch', start: { dateTime: '2025-12-12T12:30:00' } }
-        ]);
+        toast.error('Failed to sync calendar.');
+        // Only fallback to static data on actual error if desired, or just show empty
+        setEvents([]); 
       } finally {
         setLoadingEvents(false);
       }
     };
 
     fetchEvents();
-  }, [location.state]);
+  }, [user?.email]);
 
   const handleEventClick = async (event) => {
     setSelectedEvent(event);
@@ -277,9 +305,6 @@ const CalendarPage = () => {
     setGiftIdeas(null);
 
     try {
-      // Step 3c: Get Recommendations (Preference Query Agent)
-      // We pass the event details and preferences. 
-      // Note: The backend route is POST now.
       const queryResponse = await api.post('/recommendations/query', {
         event_summary: event.summary,
         event_location: event.location || "Hyderabad",
@@ -289,9 +314,8 @@ const CalendarPage = () => {
       const recs = queryResponse.data;
       setRecommendations(recs);
 
-      // Step 4: Gift Recommendation Agent
       const giftResponse = await api.post('/recommendations/gifts', {
-        events: [event], // Pass the specific event
+        events: [event],
         preferences: preferences,
         recommendations: recs
       });
@@ -326,7 +350,6 @@ const CalendarPage = () => {
           </div>
         ) : (
           <div className="row g-4">
-            {/* Left Column: Events List */}
             <div className="col-lg-4">
               <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '16px', overflow: 'hidden' }}>
                 <div className="card-header bg-white border-bottom py-3 px-4">
@@ -342,17 +365,33 @@ const CalendarPage = () => {
                     {events.map(evt => (
                       <button 
                         key={evt.id} 
-                        className={`list-group-item list-group-item-action rounded mb-2 border-0 p-3 transition-all ${selectedEvent?.id === evt.id ? 'shadow-sm bg-primary-subtle text-primary' : 'hover-bg-light'}`}
+                        className={`list-group-item list-group-item-action rounded mb-3 border-0 p-3 transition-all ${selectedEvent?.id === evt.id ? 'shadow-sm bg-primary-subtle text-primary' : 'bg-light hover-shadow'}`}
                         onClick={() => handleEventClick(evt)}
                         style={{ borderRadius: '12px' }}
                       >
-                        <div className="d-flex w-100 justify-content-between align-items-center mb-1">
+                        <div className="d-flex w-100 justify-content-between align-items-start mb-2">
                           <h6 className={`mb-0 fw-bold ${selectedEvent?.id === evt.id ? 'text-primary' : 'text-dark'}`}>{evt.summary || 'No Title'}</h6>
+                          {evt.status && <span className="badge bg-success-subtle text-success rounded-pill" style={{fontSize: '0.7rem'}}>{evt.status}</span>}
                         </div>
-                        <small className={selectedEvent?.id === evt.id ? 'text-primary' : 'text-muted'}>
-                          <i className="bi bi-clock me-2"></i>
-                          {evt.start?.dateTime ? new Date(evt.start.dateTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : evt.start?.date}
-                        </small>
+                        
+                        <div className={`small mb-2 ${selectedEvent?.id === evt.id ? 'text-primary' : 'text-muted'}`}>
+                          <div className="d-flex align-items-center mb-1">
+                              <i className="bi bi-calendar3 me-2"></i>
+                              <span>{evt.start?.dateTime ? new Date(evt.start.dateTime).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : evt.start?.date}</span>
+                          </div>
+                          {evt.location && (
+                              <div className="d-flex align-items-start">
+                                  <i className="bi bi-geo-alt me-2 mt-1"></i>
+                                  <span className="text-truncate" style={{maxWidth: '200px'}}>{evt.location}</span>
+                              </div>
+                          )}
+                        </div>
+
+                        {evt.htmlLink && (
+                            <a href={evt.htmlLink} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" style={{fontSize: '0.75rem'}} onClick={(e) => e.stopPropagation()}>
+                                View Event <i className="bi bi-box-arrow-up-right ms-1"></i>
+                            </a>
+                        )}
                       </button>
                     ))}
                     {events.length === 0 && <div className="p-4 text-center text-muted">No events found.</div>}
@@ -361,7 +400,6 @@ const CalendarPage = () => {
               </div>
             </div>
 
-            {/* Right Column: AI Insights */}
             <div className="col-lg-8">
               <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '16px', overflow: 'hidden' }}>
                 <div className="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
@@ -384,7 +422,6 @@ const CalendarPage = () => {
                         </div>
                       ) : (
                         <div className="fade-in">
-                          {/* Display Recommendations from Step 3c */}
                           {recommendations && (
                             <div className="mb-5">
                               <div className="d-flex align-items-center mb-4">
@@ -397,7 +434,6 @@ const CalendarPage = () => {
                             </div>
                           )}
 
-                          {/* Display Gift Ideas from Step 4 */}
                           {giftIdeas && (
                             <div className="mb-3">
                               <div className="d-flex align-items-center mb-4">

@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 
 const PublicDataPage = () => {
-  const { user } = useAuth();
+  const { user, preferences, updatePreferences } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
-  const [publicData, setPublicData] = useState(null); // Changed to object
+  const [publicData, setPublicData] = useState(null);
   const [error, setError] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showConnectButton, setShowConnectButton] = useState(false);
@@ -21,19 +22,56 @@ const PublicDataPage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      // 1. Use context preferences if available
+      if (preferences) {
+        setPublicData(preferences);
+        setLoading(false);
+        return;
+      }
+
+      // 2. If fresh signup, fetch from agent
+      if (location.state?.isSignup) {
+        await fetchPublicData();
+        return;
+      }
+
+      // 3. Try to fetch from backend
+      try {
+        const profileResponse = await api.post('/user-profile', { email: user.email });
+        if (profileResponse.status === 200 && profileResponse.data) {
+           setPublicData(profileResponse.data);
+           updatePreferences(profileResponse.data);
+           toast.success('Profile loaded successfully');
+           setLoading(false);
+        }
+      } catch (profileErr) {
+        // 4. Fallback to agent
+        await fetchPublicData();
+      }
+    };
+
+    const fetchPublicData = async () => {
       try {
         const response = await api.post('/public-data', {
           email: user.email, 
           name: user.name,
           phone: user.phone
         });
-        setPublicData(response.data);
+        
+        const data = response.data;
+        // Ensure profile data matches signup details
+        if (data && data.user_profiles) {
+            data.user_profiles.email = user.email;
+            if (user.name) data.user_profiles.full_name = user.name;
+            if (user.phone) data.user_profiles.phone = user.phone;
+        }
+
+        setPublicData(data);
         toast.success('Public data loaded successfully');
       } catch (err) {
         const msg = 'Failed to fetch public data. Please try again.';
         setError(msg);
         toast.error(msg);
-        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -42,12 +80,13 @@ const PublicDataPage = () => {
     if (user) {
       fetchData();
     }
-  }, [user]);
+  }, [user, preferences, location.state]);
 
   const handleSave = async () => {
     try {
       setLoading(true);
       await api.post('/preferences', publicData);
+      updatePreferences(publicData);
       setShowSuccessModal(true);
       setShowConnectButton(true);
       toast.success('Preferences saved successfully!');
@@ -55,7 +94,6 @@ const PublicDataPage = () => {
       const msg = 'Failed to save preferences.';
       setError(msg);
       toast.error(msg);
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -63,59 +101,21 @@ const PublicDataPage = () => {
 
   const handleConnectCalendar = () => {
     const authUrl = "https://accounts.google.com/o/oauth2/v2/auth?client_id=867698189324-l8bsq6g6l8408rppce5iqpl88e2ftpmk.apps.googleusercontent.com&redirect_uri=https://calender-mcp-server-bt5gn1.7y6hwo.usa-e2.cloudhub.io/callback&response_type=code&scope=openid%20email%20profile%20https://www.googleapis.com/auth/calendar%20https://www.googleapis.com/auth/contacts.readonly&access_type=offline&prompt=consent";
-    
     window.open(authUrl, '_blank', 'width=600,height=700');
     setIsAuthenticating(true);
   };
 
-  const handleFetchEvents = async () => {
-    try {
-      setLoading(true);
-      // Call the calendar events endpoint with the prepared body
-      const rpcBody = {
-        "jsonrpc": "2.0",
-        "id": "task124",
-        "method": "tasks/send",
-        "params": {
-          "message": {
-            "role": "user",
-            "parts": [
-              {
-                "type": "text",
-                "text": `get all my calendar events ${calendarEmail}?`
-              }
-            ]
-          }
-        }
-      };
-
-      const response = await api.post('/calendar/events', rpcBody);
-      
-      toast.success('Calendar events fetched successfully!');
-      // Navigate to calendar page with the fetched events and preferences
-      navigate('/calendar', { 
-        state: { 
-          preferences: publicData,
-          events: response.data 
-        } 
-      });
-    } catch (err) {
-      console.error('Failed to fetch calendar events:', err);
-      const msg = 'Failed to fetch calendar events. Please try again.';
-      setError(msg);
-      toast.error(msg);
-      setLoading(false);
-    }
+  const handleFetchEvents = () => {
+    // Navigate to calendar page, which will handle fetching events
+    navigate('/calendar');
   };
 
   const handleInputChange = (section, key, value, index = null) => {
     setPublicData(prev => {
       const newData = { ...prev };
       if (index !== null) {
-        // Handle array (family_members)
         newData[section][index][key] = value;
       } else {
-        // Handle object (user_profiles)
         newData[section][key] = value;
       }
       return newData;
@@ -125,10 +125,7 @@ const PublicDataPage = () => {
   const renderFormFields = (data, section, index = null) => {
     if (!data) return null;
     return Object.keys(data).map(key => {
-      // Skip complex objects/arrays if any (though prompt implies flat structure inside)
       if (typeof data[key] === 'object' && data[key] !== null) return null;
-      
-      // Skip user_id field
       if (key === 'user_id') return null;
 
       const isReadOnly = ['full_name', 'email', 'phone'].includes(key);
@@ -170,7 +167,6 @@ const PublicDataPage = () => {
           
           <form>
             <div className="row g-4">
-              {/* User Profiles Section */}
               {publicData.user_profiles && (
                 <div className="col-lg-6">
                   <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '16px', overflow: 'hidden' }}>
@@ -191,7 +187,6 @@ const PublicDataPage = () => {
                 </div>
               )}
 
-              {/* Family Members Section */}
               {publicData.family_members && Array.isArray(publicData.family_members) && (
                 <div className="col-lg-6">
                   <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '16px', overflow: 'hidden' }}>
@@ -256,20 +251,24 @@ const PublicDataPage = () => {
             </p>
             
             <div className="mb-4 mx-auto" style={{maxWidth: '350px'}}>
-              <input 
-                type="email" 
-                className="form-control form-control-lg text-center rounded-pill bg-light border-0 shadow-sm"
-                placeholder="Enter calendar email"
-                value={calendarEmail}
-                onChange={(e) => setCalendarEmail(e.target.value)}
-              />
-              <div className="form-text small mt-2">Confirm the email account to fetch events from</div>
+              <div className="p-3 bg-light rounded-4 border border-light-subtle">
+                <small className="text-muted d-block mb-1 text-uppercase fw-bold" style={{fontSize: '0.7rem', letterSpacing: '1px'}}>Connecting Account</small>
+                <div className="d-flex align-items-center justify-content-center">
+                  <i className="bi bi-google me-2 text-secondary"></i>
+                  <span className="fw-semibold text-dark">{calendarEmail}</span>
+                </div>
+              </div>
             </div>
 
             {!isAuthenticating ? (
-              <button className="btn btn-primary btn-lg px-5 rounded-pill shadow-lg" onClick={handleConnectCalendar}>
-                Connect Google Calendar
-              </button>
+              <div className="d-flex flex-column align-items-center gap-3">
+                <button className="btn btn-primary btn-lg px-5 rounded-pill shadow-lg" onClick={handleConnectCalendar}>
+                  Connect Google Calendar
+                </button>
+                <button className="btn btn-link text-decoration-none text-muted" onClick={handleFetchEvents} style={{fontSize: '0.9rem'}}>
+                  Already have access? <span className="fw-bold text-primary">Proceed to Calendar</span>
+                </button>
+              </div>
             ) : (
               <div className="d-flex flex-column align-items-center gap-3">
                 <p className="text-success fw-bold mb-0">
@@ -288,7 +287,6 @@ const PublicDataPage = () => {
         </div>
       )}
 
-      {/* Success Modal */}
       {showSuccessModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)' }}>
           <div className="modal-dialog modal-dialog-centered">

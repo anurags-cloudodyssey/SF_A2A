@@ -24,37 +24,42 @@ const AuthPage = () => {
     
     if (!isLogin) {
       try {
-        // Call backend signup endpoint which proxies to Supabase
         const response = await api.post('/signup', formData);
         
         if (response.status === 201) {
-          // Show welcome popup as requested
           toast.success(`Welcome, ${formData.name}!`);
-          
-          // Continue the same flow
           login({ name: formData.name, email: formData.email, phone: formData.phone });
-          navigate('/public-data');
+          navigate('/public-data', { state: { isSignup: true } });
         }
       } catch (error) {
-        console.error('Signup failed:', error);
-        
-        // Handle duplicate user error (409 Conflict)
         if (error.response && error.response.status === 409) {
           toast.info('Account already exists. Logging you in...');
-          // Automatically login and proceed
           login({ name: formData.name, email: formData.email, phone: formData.phone });
-          navigate('/public-data');
+          navigate('/public-data', { state: { isSignup: false } });
         } else {
           toast.error('Signup failed. Please check your details and try again.');
         }
       }
     } else {
-      // In a real app, we would call a backend auth endpoint here.
-      // For MVP, we just simulate success and store user info.
-      console.log('Form submitted:', formData);
-      toast.success(`Welcome back, ${formData.name || 'User'}!`);
-      login({ name: formData.name, email: formData.email, phone: formData.phone });
-      navigate('/public-data');
+      try {
+        const response = await api.post('/login', {
+          username: formData.email,
+          password: formData.password
+        });
+
+        if (response.status === 200) {
+          const { user, preferences } = response.data;
+          toast.success(`Welcome back, ${user.name || 'User'}!`);
+          login(user, preferences);
+          navigate('/public-data');
+        }
+      } catch (error) {
+        if (error.response) {
+           toast.error(error.response.data.message || 'Invalid credentials.');
+        } else {
+           toast.error('Login failed. Please try again.');
+        }
+      }
     }
   };
 

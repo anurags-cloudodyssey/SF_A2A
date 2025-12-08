@@ -7,6 +7,8 @@ const authController = require('../controllers/authController');
 
 // 0. Auth
 router.post('/signup', authController.signupUser);
+router.post('/login', authController.loginUser);
+router.post('/user-profile', authController.getUserProfile);
 
 // 1. Public Data Agent
 router.post('/public-data', agentController.getPublicData);

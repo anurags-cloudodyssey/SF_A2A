@@ -6,7 +6,12 @@ const {
   PREFERENCE_QUERY_AGENT_URL,
   GIFT_RECOMMEND_AGENT_URL,
 } = require('../config/api');
-const { PUBLIC_DATA_PROMPT, PREFERENCE_CREATE_PROMPT } = require('../config/prompts');
+const { 
+  PUBLIC_DATA_PROMPT, 
+  PREFERENCE_CREATE_PROMPT,
+  PREFERENCE_QUERY_PROMPT,
+  GIFT_RECOMMEND_PROMPT
+} = require('../config/prompts');
 const { createRpcBody, parseAgentResponse, getAgentResponseText } = require('../utils/agentHelper');
 
 // Helper to handle errors
@@ -17,16 +22,14 @@ const handleRequest = async (request) => {
   } catch (error) {
     console.error('API Error:', error.message);
     if (error.response) {
-      throw new Error(JSON.stringify(error.response.data));
+      const errorData = error.response.data;
+      const errorMessage = errorData.message || JSON.stringify(errorData);
+      throw new Error(errorMessage);
     }
     throw error;
   }
 };
 
-/**
- * Fetches public data for a user.
- * Encapsulates prompt generation and response parsing.
- */
 exports.getPublicData = async (email, name, phone) => {
   const prompt = PUBLIC_DATA_PROMPT(name, phone);
   const rpcBody = createRpcBody(prompt);
@@ -41,10 +44,6 @@ exports.getPublicData = async (email, name, phone) => {
   return parsedData;
 };
 
-/**
- * Saves user preferences to Supabase.
- * Encapsulates prompt generation and error checking.
- */
 exports.savePreferences = async (preferenceData) => {
   const jsonString = JSON.stringify(preferenceData, null, 2);
   const prompt = PREFERENCE_CREATE_PROMPT(jsonString);
@@ -52,7 +51,6 @@ exports.savePreferences = async (preferenceData) => {
 
   const rawResponse = await handleRequest(axios.post(PREFERENCE_CREATE_AGENT_URL, rpcBody));
   
-  // Check for business logic errors (like 409 Conflict) in the text response
   const textContent = getAgentResponseText(rawResponse);
   if (textContent && (
       textContent.toLowerCase().includes('conflict') || 
@@ -75,45 +73,19 @@ exports.queryPreferences = async (data) => {
   const location = eventLocation || "Hyderabad"; 
   const summary = eventSummary || "celebration";
 
-  const prompt = `For the user with phone number ${phone}, I am planning a ${summary} celebration in a specific region of ${location}; fetch recommendations based on the user's account balance. Restrict the output to the top two suggestions for each category. Provide detailed region-specific recommendations including the best hotels (with price range, capacity, ambience, suitability), top dining options (cuisine, cost for two, ambience, celebration features), nearby shopping options (malls, markets, boutiques), suitable celebration themes/venue types, and details on travel convenience, nearest metro, parking, and safety.`;
-
-  const rpcBody = {
-    "jsonrpc": "2.0",
-    "id": "task124",
-    "method": "tasks/send",
-    "params": {
-      "sessionId": "session456",
-      "message": {
-        "role": "user",
-        "parts": [
-          {
-            "type": "text",
-            "text": prompt
-          }
-        ]
-      }
-    }
-  };
+  const prompt = PREFERENCE_QUERY_PROMPT(phone, summary, location);
+  const rpcBody = createRpcBody(prompt);
 
   return handleRequest(axios.post(PREFERENCE_QUERY_AGENT_URL, rpcBody));
 };
 
 exports.getGiftRecommendations = async (data) => {
   const { events, preferences, recommendations } = data;
-  // Extract text from the previous recommendations (Agent response)
-  // Use helper if available, otherwise fallback to stringify
-  let recText = '';
-  try {
-    recText = getAgentResponseText(recommendations) || JSON.stringify(recommendations);
-  } catch (e) {
-    recText = JSON.stringify(recommendations);
-  }
-
-  // Extract user profile and family members
+  
   const userProfile = preferences?.user_profiles || {};
   const familyMembers = preferences?.family_members || [];
 
-  const prompt = `Based on the following details, suggest personalized gift ideas: Events: ${JSON.stringify(events)} User Profile: ${JSON.stringify(userProfile)} Family Members: ${JSON.stringify(familyMembers)} Provide a list of thoughtful and unique gift ideas that align with the user's interests and the nature of the events. Include brief descriptions and reasons why each gift would be suitable.`;
+  const prompt = GIFT_RECOMMEND_PROMPT(events, userProfile, familyMembers);
   const rpcBody = createRpcBody(prompt);
 
   const rawResponse = await handleRequest(axios.post(GIFT_RECOMMEND_AGENT_URL, rpcBody));
